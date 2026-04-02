@@ -17,6 +17,7 @@
   <meta name="apple-mobile-web-app-title" content="Surf Report" />
   <link rel="apple-touch-icon" href="icon.svg" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -240,8 +241,10 @@
     footer { text-align: center; font-size: 0.7rem; color: var(--muted); padding-bottom: 24px; }
     footer a { color: var(--muted); }
 
-    /* ── Card clickable ── */
+    /* ── Card clickable / draggable ── */
     .card { cursor: pointer; }
+    .card-ghost  { opacity: 0.35; border: 1px dashed rgba(255,255,255,0.2); }
+    .card-chosen { box-shadow: 0 12px 40px rgba(0,0,0,0.5); transform: scale(1.02); z-index: 10; }
 
     /* ── Detail Panel ── */
     .detail-overlay {
@@ -1114,6 +1117,20 @@ async function loadAll() {
 }
 
 loadAll();
+
+Sortable.create(document.getElementById('grid'), {
+  animation:       150,
+  delay:           200,
+  delayOnTouchOnly: true,
+  ghostClass:      'card-ghost',
+  chosenClass:     'card-chosen',
+  onEnd() {
+    const ids      = [...document.querySelectorAll('.card')].map(el => el.id.replace('card-', ''));
+    const current  = getSpots();
+    const reordered = ids.map(id => current.find(s => s.id === id)).filter(Boolean);
+    saveSpots(reordered);
+  },
+});
 
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('./sw.js');
