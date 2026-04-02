@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#08121f"/>
+
+  <!-- wave background shapes -->
+  <path d="M0 420 Q150 360 300 400 Q450 440 600 380 Q750 320 900 370 Q1050 420 1200 390 L1200 630 L0 630 Z" fill="#0e1f31" opacity="0.9"/>
+  <path d="M0 470 Q180 410 360 455 Q540 500 720 440 Q900 380 1080 430 Q1140 450 1200 440 L1200 630 L0 630 Z" fill="#142840" opacity="0.8"/>
+  <path d="M0 520 Q200 475 400 505 Q600 535 800 490 Q1000 445 1200 480 L1200 630 L0 630 Z" fill="#1a6fa0" opacity="0.5"/>
+
+  <!-- icon -->
+  <rect x="80" y="80" width="90" height="90" rx="20" fill="#0e1f31"/>
+  <path d="M95 138 Q110 120 125 132 Q140 144 155 128 Q162 121 170 125 L170 160 Q162 165 155 158 Q140 148 125 160 Q110 172 95 162 Z" fill="#1a6fa0"/>
+  <ellipse cx="140" cy="113" rx="9" ry="34" fill="white" opacity="0.9" transform="rotate(-25 140 113)"/>
+  <ellipse cx="140" cy="113" rx="3" ry="11" fill="#40c4ff" opacity="0.7" transform="rotate(-25 140 113)"/>
+
+  <!-- title -->
+  <text x="196" y="128" font-family="-apple-system, BlinkMacSystemFont, Helvetica, sans-serif" font-size="52" font-weight="700" fill="white">Surf Report</text>
+  <text x="196" y="162" font-family="-apple-system, BlinkMacSystemFont, Helvetica, sans-serif" font-size="26" fill="#6a95ae">Live conditions at your favorite breaks</text>
+
+  <!-- sample cards -->
+  <g transform="translate(80, 230)">
+    <!-- card 1 -->
+    <rect width="230" height="140" rx="14" fill="#0e1f31" stroke="rgba(255,255,255,0.07)" stroke-width="1"/>
+    <rect width="230" height="3" rx="1" fill="#40c4ff"/>
+    <text x="18" y="34" font-family="Helvetica, sans-serif" font-size="18" font-weight="600" fill="white">Malibu</text>
+    <text x="18" y="52" font-family="Helvetica, sans-serif" font-size="12" fill="#6a95ae">Malibu</text>
+    <text x="18" y="96" font-family="Helvetica, sans-serif" font-size="44" font-weight="800" fill="white">4.2</text>
+    <text x="80" y="96" font-family="Helvetica, sans-serif" font-size="18" fill="#6a95ae">ft</text>
+    <rect x="158" y="18" width="56" height="22" rx="11" fill="rgba(64,196,255,0.13)"/>
+    <text x="186" y="33" font-family="Helvetica, sans-serif" font-size="11" font-weight="700" fill="#40c4ff" text-anchor="middle">GOOD</text>
+  </g>
+
+  <g transform="translate(330, 230)">
+    <rect width="230" height="140" rx="14" fill="#0e1f31" stroke="rgba(255,255,255,0.07)" stroke-width="1"/>
+    <rect width="230" height="3" rx="1" fill="#00e676"/>
+    <text x="18" y="34" font-family="Helvetica, sans-serif" font-size="18" font-weight="600" fill="white">Trestles</text>
+    <text x="18" y="52" font-family="Helvetica, sans-serif" font-size="12" fill="#6a95ae">San Clemente</text>
+    <text x="18" y="96" font-family="Helvetica, sans-serif" font-size="44" font-weight="800" fill="white">6.1</text>
+    <text x="80" y="96" font-family="Helvetica, sans-serif" font-size="18" fill="#6a95ae">ft</text>
+    <rect x="148" y="18" width="66" height="22" rx="11" fill="rgba(0,230,118,0.13)"/>
+    <text x="181" y="33" font-family="Helvetica, sans-serif" font-size="11" font-weight="700" fill="#00e676" text-anchor="middle">EPIC</text>
+  </g>
+
+  <g transform="translate(580, 230)">
+    <rect width="230" height="140" rx="14" fill="#0e1f31" stroke="rgba(255,255,255,0.07)" stroke-width="1"/>
+    <rect width="230" height="3" rx="1" fill="#ffca28"/>
+    <text x="18" y="34" font-family="Helvetica, sans-serif" font-size="18" font-weight="600" fill="white">Rincon</text>
+    <text x="18" y="52" font-family="Helvetica, sans-serif" font-size="12" fill="#6a95ae">Ventura County</text>
+    <text x="18" y="96" font-family="Helvetica, sans-serif" font-size="44" font-weight="800" fill="white">3.5</text>
+    <text x="80" y="96" font-family="Helvetica, sans-serif" font-size="18" fill="#6a95ae">ft</text>
+    <rect x="154" y="18" width="60" height="22" rx="11" fill="rgba(255,202,40,0.13)"/>
+    <text x="184" y="33" font-family="Helvetica, sans-serif" font-size="11" font-weight="700" fill="#ffca28" text-anchor="middle">FAIR</text>
+  </g>
+
+  <g transform="translate(830, 230)">
+    <rect width="230" height="140" rx="14" fill="#0e1f31" stroke="rgba(255,255,255,0.07)" stroke-width="1"/>
+    <rect width="230" height="3" rx="1" fill="#40c4ff"/>
+    <text x="18" y="34" font-family="Helvetica, sans-serif" font-size="18" font-weight="600" fill="white">Steamer Lane</text>
+    <text x="18" y="52" font-family="Helvetica, sans-serif" font-size="12" fill="#6a95ae">Santa Cruz</text>
+    <text x="18" y="96" font-family="Helvetica, sans-serif" font-size="44" font-weight="800" fill="white">5.8</text>
+    <text x="80" y="96" font-family="Helvetica, sans-serif" font-size="18" fill="#6a95ae">ft</text>
+    <rect x="148" y="18" width="66" height="22" rx="11" fill="rgba(64,196,255,0.13)"/>
+    <text x="181" y="33" font-family="Helvetica, sans-serif" font-size="11" font-weight="700" fill="#40c4ff" text-anchor="middle">GOOD</text>
+  </g>
+
+  <!-- url -->
+  <text x="600" y="600" font-family="Helvetica, sans-serif" font-size="22" fill="#6a95ae" text-anchor="middle">chandler150.github.io/surf-dashboard</text>
+</svg>
