@@ -393,6 +393,12 @@
       <div id="detail-days"></div>
     </div>
 
+    <div class="detail-section" id="detail-tide-section" style="display:none">
+      <div class="section-title">Tides · 3 Days</div>
+      <div class="chart-wrap"><canvas id="chart-tide"></canvas></div>
+      <div id="tide-station" style="font-size:0.68rem;color:var(--muted);margin-top:6px;padding:0 4px"></div>
+    </div>
+
     <div class="detail-section" id="detail-wave-section">
       <div class="section-title">Wave Height &amp; Swell · 72h</div>
       <div class="chart-wrap"><canvas id="chart-wave"></canvas></div>
@@ -871,6 +877,157 @@ function pickResult(i) {
 }
 
 // ─────────────────────────────────────────────
+//  Tides (NOAA)
+// ─────────────────────────────────────────────
+const TIDE_STATIONS = [
+  // California
+  [32.71, -117.17, '9410170', 'San Diego, CA'],
+  [33.72, -118.27, '9410660', 'Los Angeles, CA'],
+  [34.01, -118.50, '9410840', 'Santa Monica, CA'],
+  [34.41, -119.69, '9411340', 'Santa Barbara, CA'],
+  [35.17, -120.76, '9412110', 'Port San Luis, CA'],
+  [36.60, -121.90, '9413450', 'Monterey, CA'],
+  [36.96, -122.02, '9413745', 'Santa Cruz, CA'],
+  [37.80, -122.47, '9414290', 'San Francisco, CA'],
+  [38.07, -122.81, '9415020', 'Point Reyes, CA'],
+  // Hawaii
+  [21.31, -157.87, '1612340', 'Honolulu, HI'],
+  [20.90, -156.47, '1615680', 'Kahului, HI'],
+  [19.73, -155.07, '1617760', 'Hilo, HI'],
+  [20.03, -155.83, '1617433', 'Kawaihae, HI'],
+  // East Coast
+  [28.42,  -80.59, '8721604', 'Port Canaveral, FL'],
+  [28.37,  -80.73, '8721596', 'Cocoa Beach, FL'],
+  [36.95,  -76.01, '8638863', 'Virginia Beach, VA'],
+  [41.07,  -71.96, '8516945', 'Montauk, NY'],
+  [40.56,  -74.09, '8531680', 'Sandy Hook, NJ'],
+];
+
+function nearestTideStation(lat, lon) {
+  let best = null, bestDist = Infinity;
+  for (const [slat, slon, id, name] of TIDE_STATIONS) {
+    const dist = Math.hypot(lat - slat, lon - slon);
+    if (dist < bestDist) { bestDist = dist; best = { id, name }; }
+  }
+  return bestDist < 10 ? best : null;
+}
+
+function parseNoaaTime(str) {
+  const [date, time] = str.split(' ');
+  const [y, m, d]    = date.split('-').map(Number);
+  const [h, mn]      = time.split(':').map(Number);
+  return new Date(y, m - 1, d, h, mn);
+}
+
+function fmtTideTime(d) {
+  let h = d.getHours(), mn = d.getMinutes();
+  const ap = h >= 12 ? 'pm' : 'am';
+  h = h % 12 || 12;
+  return `${h}:${String(mn).padStart(2,'0')}${ap}`;
+}
+
+async function fetchTides(spot) {
+  const station = nearestTideStation(spot.lat, spot.lon);
+  if (!station) return null;
+
+  const now = new Date();
+  const end = new Date(now.getTime() + 3 * 86400000);
+  const fmt = d => `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
+
+  const url = `https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?station=${station.id}&product=predictions&datum=MLLW&time_zone=lst_ldt&interval=hilo&units=english&application=surf_dashboard&format=json&begin_date=${fmt(now)}&end_date=${fmt(end)}`;
+  const res  = await fetch(url);
+  const data = await res.json();
+  if (!data.predictions?.length) return null;
+  return { station, predictions: data.predictions };
+}
+
+function renderTideChart(tideData) {
+  const section = document.getElementById('detail-tide-section');
+  if (!tideData) { section.style.display = 'none'; return; }
+
+  section.style.display = 'block';
+  document.getElementById('tide-station').textContent = `NOAA station: ${tideData.station.name}`;
+
+  const preds = tideData.predictions.map(p => ({
+    t: parseNoaaTime(p.t), v: parseFloat(p.v), type: p.type,
+  }));
+
+  const nowMs  = Date.now();
+  const labels = [], values = [], hiLoVals = [], hiLoColors = [];
+
+  for (let i = 0; i <= 72; i++) {
+    const tMs = nowMs + i * 3600000;
+    const t   = new Date(tMs);
+    const h   = t.getHours();
+    labels.push(
+      h === 0  ? t.toLocaleDateString('en-US', { weekday: 'short' }) :
+      h === 6  ? '6am'  :
+      h === 12 ? '12pm' :
+      h === 18 ? '6pm'  : ''
+    );
+
+    // Cosine interpolation between hi/lo points
+    let before = null, after = null;
+    for (const p of preds) {
+      if (p.t.getTime() <= tMs) before = p;
+      else if (!after) after = p;
+    }
+    let v = before?.v ?? after?.v ?? 0;
+    if (before && after) {
+      const frac = (tMs - before.t.getTime()) / (after.t.getTime() - before.t.getTime());
+      v = before.v + (after.v - before.v) * (1 - Math.cos(frac * Math.PI)) / 2;
+    }
+    values.push(+v.toFixed(2));
+
+    // Nearest hi/lo marker (within 30 min)
+    const mark = preds.find(p => Math.abs(p.t.getTime() - tMs) < 1800000);
+    hiLoVals.push(mark ? +mark.v.toFixed(2) : null);
+    hiLoColors.push(mark?.type === 'H' ? '#40c4ff' : '#ffca28');
+  }
+
+  const ctx = document.getElementById('chart-tide').getContext('2d');
+  detailCharts.push(new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Tide (ft)',
+          data: values,
+          borderColor: '#40c4ff',
+          backgroundColor: 'rgba(64,196,255,0.08)',
+          fill: true, tension: 0.4, pointRadius: 0, borderWidth: 2,
+        },
+        {
+          label: 'Hi / Lo',
+          data: hiLoVals,
+          borderColor: 'transparent',
+          backgroundColor: 'transparent',
+          pointRadius: hiLoVals.map(v => v != null ? 6 : 0),
+          pointBackgroundColor: hiLoColors,
+          pointBorderWidth: 0,
+          showLine: false,
+          tooltip: { callbacks: {
+            label: c => {
+              if (c.raw == null) return null;
+              const tMs = nowMs + c.dataIndex * 3600000;
+              const p   = preds.find(p => Math.abs(p.t.getTime() - tMs) < 1800000);
+              return p ? ` ${p.type === 'H' ? 'High' : 'Low'}: ${c.raw} ft  ${fmtTideTime(p.t)}` : null;
+            },
+          }},
+        },
+      ],
+    },
+    options: {
+      ...CHART_DEFAULTS,
+      plugins: { ...CHART_DEFAULTS.plugins, tooltip: { ...CHART_DEFAULTS.plugins.tooltip,
+        callbacks: { label: c => c.datasetIndex === 0 ? ` Tide: ${c.raw} ft` : null },
+      }},
+    },
+  }));
+}
+
+// ─────────────────────────────────────────────
 //  Detail view
 // ─────────────────────────────────────────────
 let detailCharts = [];
@@ -884,6 +1041,7 @@ function openDetail(id) {
   document.getElementById('detail-badge').textContent  = '';
   document.getElementById('detail-current').innerHTML  = '<div class="chart-loading" style="grid-column:1/-1;padding:20px">Loading…</div>';
   document.getElementById('detail-days').innerHTML     = '';
+  document.getElementById('detail-tide-section').style.display = 'none';
   document.getElementById('detail-wave-section').style.visibility = 'hidden';
   document.getElementById('detail-wind-section').style.visibility = 'hidden';
   detailCharts.forEach(c => c.destroy());
@@ -920,6 +1078,7 @@ async function loadDetail(spot) {
 
     renderDetailCurrent(spot, md.current, wd.current);
     renderDetailDays(spot, md.hourly, wd.hourly);
+    fetchTides(spot).then(renderTideChart).catch(() => {});
     renderWaveChart(md.hourly);
     renderWindChart(wd.hourly);
   } catch(e) {
