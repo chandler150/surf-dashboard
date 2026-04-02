@@ -1,0 +1,1117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>California Surf Dashboard</title>
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#08121f" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Surf" />
+  <link rel="apple-touch-icon" href="icon.svg" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #08121f;
+      --surface:  #0e1f31;
+      --surface2: #142840;
+      --border:   rgba(255,255,255,0.07);
+      --text:     #ddeeff;
+      --muted:    #6a95ae;
+      --epic:     #00e676;
+      --good:     #40c4ff;
+      --fair:     #ffca28;
+      --poor:     #ff5252;
+      --flat:     #3a5568;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    header {
+      padding: 20px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+      gap: 12px;
+    }
+    .header-left h1  { font-size: 1.35rem; font-weight: 700; letter-spacing: -0.01em; color: #fff; }
+    .header-left p   { font-size: 0.78rem; color: var(--muted); margin-top: 2px; }
+    .header-right    { display: flex; align-items: center; gap: 10px; }
+    #last-updated    { font-size: 0.75rem; color: var(--muted); white-space: nowrap; }
+
+    .btn {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 7px 14px;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.15s;
+      white-space: nowrap;
+    }
+    .btn:hover { background: #1c3550; }
+    .btn svg   { width: 13px; height: 13px; flex-shrink: 0; }
+    .btn-add   { background: rgba(64,196,255,0.1); border-color: rgba(64,196,255,0.25); color: var(--good); }
+    .btn-add:hover { background: rgba(64,196,255,0.18); }
+    .btn-refresh.spinning svg { animation: spin 0.9s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Grid ── */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(268px, 1fr));
+      gap: 14px;
+      padding: 22px 28px 40px;
+    }
+
+    /* ── Card ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+      transition: transform 0.18s, border-color 0.18s;
+      position: relative;
+    }
+    .card:hover { transform: translateY(-3px); border-color: rgba(255,255,255,0.14); }
+
+    .quality-bar { height: 3px; }
+    .quality-bar.epic        { background: var(--epic); }
+    .quality-bar.good        { background: var(--good); }
+    .quality-bar.fair        { background: var(--fair); }
+    .quality-bar.poor        { background: var(--poor); }
+    .quality-bar.flat        { background: var(--flat); }
+    .quality-bar.loading-bar { background: var(--surface2); }
+
+    .card-top {
+      padding: 14px 18px 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 8px;
+    }
+    .beach-name   { font-size: 1rem; font-weight: 600; color: #fff; }
+    .beach-region { font-size: 0.7rem; color: var(--muted); margin-top: 2px; }
+
+    .card-top-right { display: flex; align-items: center; gap: 7px; flex-shrink: 0; }
+
+    .btn-remove {
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-size: 0.85rem;
+      cursor: pointer;
+      padding: 6px 8px;
+      border-radius: 6px;
+      opacity: 0.5;
+      transition: opacity 0.15s, color 0.15s, background 0.15s;
+      line-height: 1;
+      min-width: 30px;
+      min-height: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .btn-remove:hover { opacity: 1; color: var(--poor); background: rgba(255,82,82,0.1); }
+
+    .badge {
+      font-size: 0.67rem; font-weight: 700; letter-spacing: 0.06em;
+      text-transform: uppercase; padding: 3px 9px; border-radius: 20px; flex-shrink: 0;
+    }
+    .badge.epic { background: rgba(0,230,118,0.13);  color: var(--epic); }
+    .badge.good { background: rgba(64,196,255,0.13); color: var(--good); }
+    .badge.fair { background: rgba(255,202,40,0.13); color: var(--fair); }
+    .badge.poor { background: rgba(255,82,82,0.13);  color: var(--poor); }
+    .badge.flat { background: rgba(58,85,104,0.3);   color: var(--muted); }
+
+    .wave-display {
+      padding: 2px 18px 14px;
+      display: flex; align-items: baseline; gap: 6px;
+    }
+    .wave-ft    { font-size: 2.9rem; font-weight: 800; line-height: 1; color: #fff; letter-spacing: -0.02em; }
+    .wave-unit  { font-size: 0.9rem; color: var(--muted); }
+    .wave-range { font-size: 0.78rem; color: var(--muted); margin-left: 2px; }
+
+    .stats { display: grid; grid-template-columns: 1fr 1fr 1fr; border-top: 1px solid var(--border); }
+    .stat  { padding: 10px 14px; border-right: 1px solid var(--border); }
+    .stat:last-child { border-right: none; }
+    .stat-label { font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); margin-bottom: 4px; }
+    .stat-value { font-size: 0.88rem; font-weight: 600; color: var(--text); white-space: nowrap; }
+    .stat-sub   { font-size: 0.68rem; color: var(--muted); margin-top: 2px; }
+
+    .offshore { color: var(--epic); }
+    .cross    { color: var(--fair); }
+    .onshore  { color: var(--poor); }
+    .dir-arrow { display: inline-block; font-size: 0.9rem; line-height: 1; }
+
+    /* ── Skeleton ── */
+    .skel {
+      background: var(--surface2); border-radius: 4px; display: inline-block;
+      animation: pulse 1.4s ease-in-out infinite;
+    }
+    @keyframes pulse { 0%,100% { opacity: 0.35; } 50% { opacity: 0.7; } }
+
+    .card-error { padding: 12px 18px 16px; font-size: 0.78rem; color: var(--poor); }
+
+    /* ── Modal ── */
+    .modal-overlay {
+      position: fixed; inset: 0; z-index: 100;
+      background: rgba(0,0,0,0.65);
+      display: flex; align-items: flex-start; justify-content: center;
+      padding: 60px 16px 16px;
+      backdrop-filter: blur(4px);
+    }
+    .modal-overlay[hidden] { display: none; }
+
+    .modal {
+      background: #0f2235;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 16px;
+      width: 100%;
+      max-width: 440px;
+      box-shadow: 0 24px 60px rgba(0,0,0,0.5);
+      overflow: hidden;
+    }
+
+    .modal-head {
+      padding: 18px 20px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+    }
+    .modal-head span { font-size: 0.95rem; font-weight: 600; color: #fff; }
+    .modal-close {
+      background: none; border: none; color: var(--muted);
+      font-size: 1rem; cursor: pointer; padding: 2px 6px;
+      border-radius: 6px; transition: color 0.15s, background 0.15s;
+    }
+    .modal-close:hover { color: #fff; background: rgba(255,255,255,0.08); }
+
+    .search-input {
+      width: 100%; padding: 14px 20px;
+      background: transparent;
+      border: none; border-bottom: 1px solid var(--border);
+      color: var(--text); font-size: 0.95rem;
+      outline: none;
+    }
+    .search-input::placeholder { color: var(--muted); }
+
+    .search-status { padding: 8px 20px; font-size: 0.75rem; color: var(--muted); min-height: 30px; }
+
+    .search-results { max-height: 320px; overflow-y: auto; }
+
+    .search-result {
+      width: 100%; padding: 12px 20px;
+      background: none; border: none; border-bottom: 1px solid var(--border);
+      text-align: left; cursor: pointer;
+      display: flex; flex-direction: column; gap: 3px;
+      transition: background 0.12s;
+    }
+    .search-result:last-child { border-bottom: none; }
+    .search-result:hover { background: rgba(255,255,255,0.05); }
+    .result-name   { font-size: 0.9rem; font-weight: 600; color: #fff; }
+    .result-region { font-size: 0.75rem; color: var(--muted); }
+
+    .search-empty { padding: 20px; font-size: 0.82rem; color: var(--muted); text-align: center; }
+    .results-divider { padding: 6px 20px; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); background: rgba(255,255,255,0.03); border-bottom: 1px solid var(--border); }
+
+    /* ── Footer ── */
+    footer { text-align: center; font-size: 0.7rem; color: var(--muted); padding-bottom: 24px; }
+    footer a { color: var(--muted); }
+
+    /* ── Card clickable ── */
+    .card { cursor: pointer; }
+
+    /* ── Detail Panel ── */
+    .detail-overlay {
+      position: fixed; inset: 0; z-index: 200;
+      background: var(--bg);
+      display: flex; flex-direction: column;
+      overflow: hidden;
+    }
+    .detail-overlay[hidden] { display: none; }
+
+    .detail-header {
+      padding: 14px 20px;
+      display: flex; align-items: center; gap: 12px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .detail-back {
+      background: none; border: none; color: var(--muted);
+      font-size: 0.85rem; cursor: pointer; padding: 6px 10px;
+      border-radius: 8px; transition: background 0.15s, color 0.15s;
+      white-space: nowrap; display: flex; align-items: center; gap: 5px;
+    }
+    .detail-back:hover { background: var(--surface2); color: #fff; }
+    .detail-title { flex: 1; min-width: 0; }
+    .detail-title h2 { font-size: 1.05rem; font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .detail-title p  { font-size: 0.72rem; color: var(--muted); margin-top: 1px; }
+
+    .detail-scroll { flex: 1; overflow-y: auto; padding-bottom: 48px; }
+
+    .detail-current {
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      border-bottom: 1px solid var(--border);
+    }
+    .detail-stat { padding: 14px 16px; border-right: 1px solid var(--border); }
+    .detail-stat:last-child { border-right: none; }
+    .detail-stat-label { font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); margin-bottom: 5px; }
+    .detail-stat-value { font-size: 1.4rem; font-weight: 800; color: #fff; line-height: 1; }
+    .detail-stat-value span { font-size: 0.8rem; font-weight: 400; color: var(--muted); }
+    .detail-stat-sub { font-size: 0.68rem; color: var(--muted); margin-top: 4px; }
+
+    .detail-section { padding: 20px 20px 0; }
+    .section-title { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.09em; color: var(--muted); margin-bottom: 12px; }
+
+    /* 7-day grid */
+    .days-grid {
+      display: grid; grid-template-columns: repeat(7, 1fr);
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; overflow: hidden; margin-bottom: 4px;
+    }
+    .day-col { padding: 12px 4px; text-align: center; border-right: 1px solid var(--border); }
+    .day-col:last-child { border-right: none; }
+    .day-name { font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin-bottom: 8px; }
+    .day-ht   { font-size: 0.72rem; font-weight: 600; color: #fff; margin-bottom: 6px; }
+    .day-session { margin-top: 5px; }
+    .day-session-label { font-size: 0.52rem; color: var(--muted); margin-bottom: 2px; }
+    .day-dot { width: 9px; height: 9px; border-radius: 50%; margin: 0 auto; }
+    .day-dot.epic { background: var(--epic); box-shadow: 0 0 6px var(--epic); }
+    .day-dot.good { background: var(--good); }
+    .day-dot.fair { background: var(--fair); }
+    .day-dot.poor { background: var(--poor); }
+    .day-dot.flat { background: var(--flat); }
+
+    /* Charts */
+    .chart-wrap {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 16px 12px 8px; margin-bottom: 16px;
+      position: relative; height: 200px;
+    }
+    .chart-loading {
+      display: flex; align-items: center; justify-content: center;
+      height: 100%; font-size: 0.78rem; color: var(--muted);
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 520px) {
+      header { padding: 16px; }
+      .grid  { padding: 16px 16px 32px; gap: 12px; }
+      .wave-ft { font-size: 2.4rem; }
+      #last-updated { display: none; }
+      .detail-current { grid-template-columns: repeat(2, 1fr); }
+      .detail-stat:nth-child(2) { border-right: none; }
+      .detail-stat:nth-child(3) { border-top: 1px solid var(--border); }
+      .detail-stat:nth-child(4) { border-top: 1px solid var(--border); }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <h1>California Surf</h1>
+    <p>Live conditions at your favorite breaks</p>
+  </div>
+  <div class="header-right">
+    <span id="last-updated">—</span>
+    <button class="btn btn-add" onclick="openModal()">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+        <line x1="8" y1="2" x2="8" y2="14"/><line x1="2" y1="8" x2="14" y2="8"/>
+      </svg>
+      Add Spot
+    </button>
+    <button class="btn btn-refresh" id="refresh-btn" onclick="loadAll()">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M1.5 8a6.5 6.5 0 1 0 1.1-3.6"/>
+        <polyline points="1.5 2 1.5 5.5 5 5.5"/>
+      </svg>
+      Refresh
+    </button>
+  </div>
+</header>
+
+<!-- Add Spot Modal -->
+<div id="modal" class="modal-overlay" hidden>
+  <div class="modal">
+    <div class="modal-head">
+      <span>Add a Spot</span>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <input id="search-input" class="search-input" type="text"
+           placeholder="Search breaks, beaches, regions…" autocomplete="off" />
+    <div id="search-results" class="search-results"></div>
+  </div>
+</div>
+
+<!-- Detail Panel -->
+<div id="detail" class="detail-overlay" hidden>
+  <div class="detail-header">
+    <button class="detail-back" onclick="closeDetail()">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="10 4 6 8 10 12"/></svg>
+      Back
+    </button>
+    <div class="detail-title">
+      <h2 id="detail-name"></h2>
+      <p id="detail-region"></p>
+    </div>
+    <span id="detail-badge" class="badge"></span>
+  </div>
+
+  <div class="detail-scroll">
+    <div class="detail-current" id="detail-current">
+      <div class="chart-loading" style="grid-column:1/-1;padding:20px">Loading…</div>
+    </div>
+
+    <div class="detail-section">
+      <div class="section-title">7-Day Forecast</div>
+      <div id="detail-days"></div>
+    </div>
+
+    <div class="detail-section" id="detail-wave-section">
+      <div class="section-title">Wave Height &amp; Swell · 72h</div>
+      <div class="chart-wrap"><canvas id="chart-wave"></canvas></div>
+    </div>
+
+    <div class="detail-section" id="detail-wind-section">
+      <div class="section-title">Wind &amp; Gusts · 72h</div>
+      <div class="chart-wrap"><canvas id="chart-wind"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<div class="grid" id="grid"></div>
+
+<footer>
+  Wave &amp; swell data: <a href="https://open-meteo.com" target="_blank">Open-Meteo Marine API</a>
+  &nbsp;·&nbsp; Wind: Open-Meteo Weather API
+</footer>
+
+<script>
+// ─────────────────────────────────────────────
+//  Curated surf spot catalog (CA + beyond)
+// ─────────────────────────────────────────────
+const SURF_SPOTS = [
+  // San Diego
+  { name: 'Ocean Beach',        region: 'San Diego',          lat: 32.7479, lon: -117.2526, facing: 270 },
+  { name: 'Mission Beach',      region: 'San Diego',          lat: 32.7710, lon: -117.2523, facing: 270 },
+  { name: 'Pacific Beach',      region: 'San Diego',          lat: 32.7974, lon: -117.2535, facing: 270 },
+  { name: 'Tourmaline',         region: 'San Diego',          lat: 32.8126, lon: -117.2580, facing: 270 },
+  { name: 'Windansea',          region: 'La Jolla',           lat: 32.8314, lon: -117.2788, facing: 270 },
+  { name: 'Big Rock',           region: 'La Jolla',           lat: 32.8390, lon: -117.2795, facing: 270 },
+  { name: 'Blacks Beach',       region: 'La Jolla',           lat: 32.8800, lon: -117.2534, facing: 270 },
+  { name: 'Del Mar',            region: 'Del Mar',            lat: 32.9590, lon: -117.2660, facing: 270 },
+  { name: 'Fletcher Cove',      region: 'Solana Beach',       lat: 32.9920, lon: -117.2716, facing: 270 },
+  { name: 'Cardiff Reef',       region: 'Encinitas',          lat: 33.0165, lon: -117.2793, facing: 247 },
+  { name: 'Cardiff',            region: 'Encinitas',          lat: 33.0165, lon: -117.2793, facing: 247 },
+  { name: 'San Elijo',          region: 'Encinitas',          lat: 33.0270, lon: -117.2820, facing: 270 },
+  { name: 'Swamis',             region: 'Encinitas',          lat: 33.0360, lon: -117.2920, facing: 247 },
+  { name: 'Grandview',          region: 'Leucadia',           lat: 33.0690, lon: -117.3000, facing: 270 },
+  { name: 'Ponto',              region: 'Carlsbad',           lat: 33.0826, lon: -117.3052, facing: 270 },
+  { name: 'Tamarack',           region: 'Carlsbad',           lat: 33.1560, lon: -117.3480, facing: 270 },
+  { name: 'Oceanside Pier',     region: 'Oceanside',          lat: 33.1975, lon: -117.3810, facing: 270 },
+  // San Clemente / Orange County
+  { name: "Cotton's Point",     region: 'San Clemente',       lat: 33.3611, lon: -117.5544, facing: 247 },
+  { name: 'San Onofre',         region: 'San Clemente',       lat: 33.3739, lon: -117.5598, facing: 247 },
+  { name: 'Trestles',           region: 'San Clemente',       lat: 33.3856, lon: -117.5885, facing: 247 },
+  { name: 'T-Street',           region: 'San Clemente',       lat: 33.4120, lon: -117.6090, facing: 247 },
+  { name: 'San Clemente Pier',  region: 'San Clemente',       lat: 33.4161, lon: -117.6218, facing: 247 },
+  { name: 'Doheny',             region: 'Dana Point',         lat: 33.4618, lon: -117.6813, facing: 247 },
+  { name: 'Salt Creek',         region: 'Dana Point',         lat: 33.4930, lon: -117.7060, facing: 247 },
+  { name: 'Aliso Beach',        region: 'Laguna Beach',       lat: 33.5186, lon: -117.7477, facing: 247 },
+  { name: 'Brooks Street',      region: 'Laguna Beach',       lat: 33.5413, lon: -117.7826, facing: 225 },
+  { name: 'Huntington Beach',   region: 'Huntington Beach',   lat: 33.6536, lon: -118.0017, facing: 247 },
+  { name: 'The Wedge',          region: 'Newport Beach',      lat: 33.5963, lon: -117.8800, facing: 135 },
+  { name: 'Newport Beach',      region: 'Newport Beach',      lat: 33.6189, lon: -117.9289, facing: 225 },
+  { name: 'Bolsa Chica',        region: 'Huntington Beach',   lat: 33.7050, lon: -118.0534, facing: 247 },
+  // Los Angeles
+  { name: 'El Porto',           region: 'Manhattan Beach',    lat: 33.9022, lon: -118.4180, facing: 270 },
+  { name: 'Manhattan Beach',    region: 'Manhattan Beach',    lat: 33.8855, lon: -118.4130, facing: 270 },
+  { name: 'Hermosa Beach',      region: 'Hermosa Beach',      lat: 33.8626, lon: -118.4007, facing: 270 },
+  { name: 'Redondo Beach',      region: 'Redondo Beach',      lat: 33.8442, lon: -118.3933, facing: 225 },
+  { name: 'Torrance Beach',     region: 'South Bay',          lat: 33.7972, lon: -118.3716, facing: 225 },
+  { name: 'RAT Beach',          region: 'Palos Verdes',       lat: 33.8054, lon: -118.3980, facing: 225 },
+  { name: 'Lunada Bay',         region: 'Palos Verdes',       lat: 33.7541, lon: -118.4126, facing: 225 },
+  { name: 'Malibu',             region: 'Malibu',             lat: 34.0361, lon: -118.6783, facing: 180 },
+  { name: 'Zuma Beach',         region: 'Malibu',             lat: 34.0148, lon: -118.8232, facing: 270 },
+  { name: 'Point Dume',         region: 'Malibu',             lat: 34.0015, lon: -118.8070, facing: 180 },
+  { name: 'Leo Carrillo',       region: 'Malibu',             lat: 34.0450, lon: -118.9354, facing: 270 },
+  // Ventura
+  { name: 'Rincon',             region: 'Ventura County',     lat: 34.3742, lon: -119.4727, facing: 180 },
+  { name: 'C Street',           region: 'Ventura',            lat: 34.2651, lon: -119.2979, facing: 180 },
+  { name: 'Ventura Pier',       region: 'Ventura',            lat: 34.2680, lon: -119.3036, facing: 180 },
+  { name: 'Emma Wood',          region: 'Ventura',            lat: 34.2940, lon: -119.3490, facing: 180 },
+  { name: 'Silver Strand',      region: 'Oxnard',             lat: 34.2060, lon: -119.2430, facing: 247 },
+  // Santa Barbara
+  { name: 'El Capitan',         region: 'Santa Barbara',      lat: 34.4584, lon: -120.0233, facing: 180 },
+  { name: 'Refugio',            region: 'Santa Barbara',      lat: 34.4660, lon: -120.0686, facing: 180 },
+  { name: 'Jalama',             region: 'Santa Barbara',      lat: 34.5019, lon: -120.5009, facing: 247 },
+  // Central Coast
+  { name: 'Pismo Beach',        region: 'Central Coast',      lat: 35.1428, lon: -120.6441, facing: 247 },
+  { name: 'Cayucos',            region: 'Central Coast',      lat: 35.4444, lon: -120.8951, facing: 270 },
+  { name: 'Morro Bay',          region: 'Central Coast',      lat: 35.3659, lon: -120.8608, facing: 247 },
+  // Santa Cruz
+  { name: 'Steamer Lane',       region: 'Santa Cruz',         lat: 36.9513, lon: -122.0265, facing: 315 },
+  { name: 'Pleasure Point',     region: 'Santa Cruz',         lat: 36.9627, lon: -121.9775, facing: 315 },
+  { name: 'Cowells',            region: 'Santa Cruz',         lat: 36.9541, lon: -122.0308, facing: 270 },
+  { name: 'Capitola',           region: 'Santa Cruz',         lat: 36.9763, lon: -121.9536, facing: 180 },
+  { name: '38th Ave',           region: 'Santa Cruz',         lat: 36.9538, lon: -121.9660, facing: 315 },
+  // Northern CA
+  { name: 'Linda Mar',          region: 'Pacifica',           lat: 37.5788, lon: -122.5038, facing: 270 },
+  { name: 'Ocean Beach',        region: 'San Francisco',      lat: 37.7599, lon: -122.5107, facing: 270 },
+  { name: 'Fort Point',         region: 'San Francisco',      lat: 37.8107, lon: -122.4776, facing: 315 },
+  { name: 'Bolinas',            region: 'Marin County',       lat: 37.9066, lon: -122.7042, facing: 247 },
+  { name: 'Stinson Beach',      region: 'Marin County',       lat: 37.8937, lon: -122.6434, facing: 247 },
+  { name: 'Mavericks',          region: 'Half Moon Bay',      lat: 37.4956, lon: -122.5005, facing: 315 },
+  // Hawaii — Oahu North Shore
+  { name: 'Pipeline',           region: 'Oahu North Shore',   lat: 21.6647, lon: -158.0530, facing: 315 },
+  { name: 'Sunset Beach',       region: 'Oahu North Shore',   lat: 21.6782, lon: -158.0400, facing: 315 },
+  { name: 'Waimea Bay',         region: 'Oahu North Shore',   lat: 21.6428, lon: -158.0657, facing:   0 },
+  { name: 'Rocky Point',        region: 'Oahu North Shore',   lat: 21.6685, lon: -158.0466, facing: 315 },
+  { name: 'Laniakea',           region: 'Oahu North Shore',   lat: 21.6216, lon: -158.1005, facing: 315 },
+  { name: "Chun's Reef",        region: 'Oahu North Shore',   lat: 21.6097, lon: -158.1023, facing: 315 },
+  { name: 'Haleiwa',            region: 'Oahu North Shore',   lat: 21.5939, lon: -158.1055, facing: 315 },
+  // Hawaii — Oahu South Shore
+  { name: 'Ala Moana Bowls',    region: 'Honolulu',           lat: 21.2867, lon: -157.8558, facing: 180 },
+  { name: 'Diamond Head',       region: 'Honolulu',           lat: 21.2528, lon: -157.8038, facing: 135 },
+  { name: 'Sandy Beach',        region: 'Oahu East Side',     lat: 21.2930, lon: -157.6726, facing: 135 },
+  { name: 'Makapuu',            region: 'Oahu East Side',     lat: 21.3110, lon: -157.6500, facing:  90 },
+  // Hawaii — Maui
+  { name: 'Honolua Bay',        region: 'Maui',               lat: 21.0095, lon: -156.6434, facing: 315 },
+  { name: "Ho'okipa",           region: 'Maui',               lat: 20.9344, lon: -156.3538, facing: 315 },
+  { name: 'Jaws (Peahi)',       region: 'Maui',               lat: 20.9390, lon: -156.3130, facing: 315 },
+  // Baja California Norte
+  { name: 'San Miguel',         region: 'Ensenada, Baja',     lat: 31.8530, lon: -116.7305, facing: 270 },
+  { name: 'K38',                region: 'Ensenada, Baja',     lat: 31.7800, lon: -116.7100, facing: 270 },
+  { name: 'K55',                region: 'Ensenada, Baja',     lat: 31.6050, lon: -116.6250, facing: 270 },
+  // Baja California Sur
+  { name: 'Scorpion Bay',       region: 'San Juanico, Baja',  lat: 26.2267, lon: -111.8303, facing: 270 },
+  { name: 'Cerritos',           region: 'Todos Santos, Baja', lat: 23.3680, lon: -110.2000, facing: 270 },
+  { name: 'Zippers',            region: 'San Jose del Cabo',  lat: 23.0650, lon: -109.6950, facing: 180 },
+  // Mexico
+  { name: 'Puerto Escondido',   region: 'Oaxaca, Mexico',     lat: 15.8645, lon:  -97.0731, facing: 180 },
+  // East Coast USA
+  { name: 'Sebastian Inlet',    region: 'Florida',            lat: 27.8600, lon:  -80.4530, facing:  90 },
+  { name: 'Cocoa Beach',        region: 'Florida',            lat: 28.3200, lon:  -80.6100, facing:  90 },
+  { name: 'Rockaway Beach',     region: 'New York',           lat: 40.5840, lon:  -73.8150, facing: 180 },
+  { name: 'Montauk',            region: 'New York',           lat: 41.0370, lon:  -71.9540, facing: 180 },
+  { name: 'Virginia Beach',     region: 'Virginia',           lat: 36.8538, lon:  -75.9780, facing:  90 },
+  // International
+  { name: 'Uluwatu',            region: 'Bali, Indonesia',    lat:  -8.8291, lon: 115.0849, facing: 225 },
+  { name: 'Padang Padang',      region: 'Bali, Indonesia',    lat:  -8.8109, lon: 115.1014, facing: 270 },
+  { name: 'Keramas',            region: 'Bali, Indonesia',    lat:  -8.7143, lon: 115.2371, facing: 270 },
+  { name: "Jeffreys Bay",       region: 'Eastern Cape, SA',   lat: -34.0456, lon:  24.9214, facing: 225 },
+  { name: 'Hossegor',           region: 'Landes, France',     lat:  43.6680, lon:   -1.4260, facing: 270 },
+  { name: 'Mundaka',            region: 'Basque Country, ES', lat:  43.4058, lon:   -2.6986, facing:   0 },
+  { name: 'Fistral',            region: 'Cornwall, UK',       lat:  50.4160, lon:   -5.0900, facing: 270 },
+];
+
+// ─────────────────────────────────────────────
+//  Defaults
+// ─────────────────────────────────────────────
+const DEFAULTS = [
+  { id: 'd0', name: 'El Porto',    region: 'Manhattan Beach', lat: 33.9022, lon: -118.4180, facing: 270 },
+  { id: 'd1', name: 'Torrance',    region: 'South Bay',       lat: 33.7972, lon: -118.3716, facing: 225 },
+  { id: 'd2', name: 'Malibu',      region: 'Malibu',          lat: 34.0361, lon: -118.6783, facing: 180 },
+  { id: 'd3', name: 'Rincon',      region: 'Ventura County',  lat: 34.3742, lon: -119.4727, facing: 180 },
+  { id: 'd4', name: 'Santa Cruz',  region: 'Santa Cruz',      lat: 36.9741, lon: -122.0308, facing: 315 },
+  { id: 'd5', name: 'San Onofre',  region: 'San Clemente',    lat: 33.3739, lon: -117.5598, facing: 247 },
+  { id: 'd6', name: 'Trestles',    region: 'San Clemente',    lat: 33.3856, lon: -117.5885, facing: 247 },
+  { id: 'd7', name: 'Cardiff',     region: 'Encinitas',       lat: 33.0165, lon: -117.2793, facing: 247 },
+  { id: 'd8', name: 'Blacks',      region: 'La Jolla',        lat: 32.8800, lon: -117.2534, facing: 270 },
+  { id: 'd9', name: 'Ocean Beach', region: 'San Diego',       lat: 32.7479, lon: -117.2526, facing: 270 },
+];
+
+// ─────────────────────────────────────────────
+//  Storage
+// ─────────────────────────────────────────────
+const STORAGE_KEY = 'surf-spots-v1';
+
+function getSpots() {
+  try {
+    const s = localStorage.getItem(STORAGE_KEY);
+    if (s) return JSON.parse(s);
+  } catch(e) {}
+  return DEFAULTS;
+}
+
+function saveSpots(spots) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(spots));
+}
+
+// ─────────────────────────────────────────────
+//  Helpers
+// ─────────────────────────────────────────────
+const mToFt = m => m * 3.28084;
+
+function fmtFt(m) {
+  if (m == null || isNaN(m)) return '--';
+  return mToFt(m).toFixed(1);
+}
+
+const COMPASS = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+function degToCompass(deg) {
+  if (deg == null) return '--';
+  return COMPASS[Math.round(deg / 22.5) % 16];
+}
+
+function dirArrow(deg) {
+  if (deg == null) return '';
+  const rot = (deg + 180) % 360;
+  return `<span class="dir-arrow" style="transform:rotate(${rot}deg)">↑</span>`;
+}
+
+function windChar(windDeg, beachFacing) {
+  if (windDeg == null) return { cls: '', label: '' };
+  const landDir = (beachFacing + 180) % 360;
+  const diff = Math.abs(((windDeg - landDir) + 360) % 360);
+  const norm = diff > 180 ? 360 - diff : diff;
+  if (norm <= 50)  return { cls: 'offshore', label: 'Offshore' };
+  if (norm <= 100) return { cls: 'cross',    label: 'Cross' };
+  return                  { cls: 'onshore',  label: 'Onshore' };
+}
+
+function calcQuality(waveH, period, windSpd, windDeg, beachFacing) {
+  const ft = mToFt(waveH || 0);
+  if (ft < 0.5) return 'flat';
+  let score = 0;
+  if      (ft >= 8)   score += 5;
+  else if (ft >= 5)   score += 4;
+  else if (ft >= 3)   score += 3;
+  else if (ft >= 1.5) score += 2;
+  else                score += 1;
+  if      (period >= 15) score += 4;
+  else if (period >= 12) score += 3;
+  else if (period >= 9)  score += 2;
+  else if (period >= 6)  score += 1;
+  const wc = windChar(windDeg, beachFacing);
+  if      (wc.cls === 'offshore' && windSpd < 12) score += 3;
+  else if (wc.cls === 'offshore')                 score += 2;
+  else if (wc.cls === 'cross')                    score += 1;
+  else if (windSpd > 15)                          score -= 2;
+  if (score >= 9) return 'epic';
+  if (score >= 6) return 'good';
+  if (score >= 3) return 'fair';
+  return 'poor';
+}
+
+const QUALITY_LABEL = { epic: 'Epic', good: 'Good', fair: 'Fair', poor: 'Poor', flat: 'Flat' };
+
+// ─────────────────────────────────────────────
+//  Fetch
+// ─────────────────────────────────────────────
+async function fetchBeach(beach) {
+  const marineParams = [
+    'wave_height','wave_period','wave_direction',
+    'swell_wave_height','swell_wave_period','swell_wave_direction','wind_wave_height'
+  ].join(',');
+
+  const [mr, wr] = await Promise.all([
+    fetch(`https://marine-api.open-meteo.com/v1/marine?latitude=${beach.lat}&longitude=${beach.lon}&current=${marineParams}`),
+    fetch(`https://api.open-meteo.com/v1/forecast?latitude=${beach.lat}&longitude=${beach.lon}&current=wind_speed_10m,wind_direction_10m,wind_gusts_10m&wind_speed_unit=mph`),
+  ]);
+  if (!mr.ok || !wr.ok) throw new Error('API error');
+  const [md, wd] = await Promise.all([mr.json(), wr.json()]);
+  const mc = md.current, wc = wd.current;
+  return {
+    waveHeight:  mc.wave_height,
+    wavePeriod:  mc.wave_period,
+    waveDir:     mc.wave_direction,
+    swellHeight: mc.swell_wave_height,
+    swellPeriod: mc.swell_wave_period,
+    swellDir:    mc.swell_wave_direction,
+    windWaveH:   mc.wind_wave_height,
+    windSpeed:   wc.wind_speed_10m,
+    windDir:     wc.wind_direction_10m,
+    windGusts:   wc.wind_gusts_10m,
+  };
+}
+
+// ─────────────────────────────────────────────
+//  Render
+// ─────────────────────────────────────────────
+function cardId(spot) {
+  return 'card-' + spot.id;
+}
+
+function skeletonCard(spot) {
+  return `
+    <div class="card" id="${cardId(spot)}" onclick="openDetail('${spot.id}')">
+      <div class="quality-bar loading-bar"></div>
+      <div class="card-top">
+        <div>
+          <div class="beach-name">${spot.name}</div>
+          <div class="beach-region">${spot.region}</div>
+        </div>
+        <div class="card-top-right">
+          <button class="btn-remove" onclick="event.stopPropagation();removeSpot('${spot.id}')" title="Remove">✕</button>
+          <span class="skel" style="width:46px;height:20px;border-radius:20px"></span>
+        </div>
+      </div>
+      <div class="wave-display">
+        <span class="skel" style="width:90px;height:40px;border-radius:6px"></span>
+      </div>
+      <div class="stats">
+        <div class="stat"><div class="skel" style="width:30px;height:14px"></div></div>
+        <div class="stat"><div class="skel" style="width:54px;height:14px"></div></div>
+        <div class="stat"><div class="skel" style="width:40px;height:14px"></div></div>
+      </div>
+    </div>`;
+}
+
+function renderCard(spot, data) {
+  const el = document.getElementById(cardId(spot));
+  if (!el) return;
+
+  if (data.error) {
+    el.innerHTML = `
+      <div class="quality-bar flat"></div>
+      <div class="card-top">
+        <div>
+          <div class="beach-name">${spot.name}</div>
+          <div class="beach-region">${spot.region}</div>
+        </div>
+        <div class="card-top-right">
+          <button class="btn-remove" onclick="event.stopPropagation();removeSpot('${spot.id}')" title="Remove">✕</button>
+        </div>
+      </div>
+      <div class="card-error">Could not load data — check connection</div>`;
+    return;
+  }
+
+  const quality    = calcQuality(data.waveHeight, data.wavePeriod, data.windSpeed, data.windDir, spot.facing);
+  const wc         = windChar(data.windDir, spot.facing);
+  const ft         = fmtFt(data.waveHeight);
+  const windWaveFt = mToFt(data.windWaveH || 0);
+  const baseFt     = mToFt(data.waveHeight || 0);
+  const minFt      = Math.max(0, baseFt - windWaveFt * 0.4).toFixed(1);
+  const maxFt      = (baseFt + windWaveFt * 0.3).toFixed(1);
+  const rangeStr   = minFt !== maxFt ? `${minFt}–${maxFt}` : ft;
+
+  el.innerHTML = `
+    <div class="quality-bar ${quality}"></div>
+    <div class="card-top">
+      <div>
+        <div class="beach-name">${spot.name}</div>
+        <div class="beach-region">${spot.region}</div>
+      </div>
+      <div class="card-top-right">
+        <button class="btn-remove" onclick="removeSpot('${spot.id}')" title="Remove">✕</button>
+        <span class="badge ${quality}">${QUALITY_LABEL[quality]}</span>
+      </div>
+    </div>
+    <div class="wave-display">
+      <span class="wave-ft">${ft}</span>
+      <span class="wave-unit">ft</span>
+      <span class="wave-range">(${rangeStr})</span>
+    </div>
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-label">Period</div>
+        <div class="stat-value">${data.wavePeriod != null ? data.wavePeriod.toFixed(0) + 's' : '--'}</div>
+        <div class="stat-sub">${dirArrow(data.waveDir)} ${degToCompass(data.waveDir)}</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Wind</div>
+        <div class="stat-value ${wc.cls}">${data.windSpeed != null ? data.windSpeed.toFixed(0) : '--'} mph</div>
+        <div class="stat-sub">${degToCompass(data.windDir)} · ${wc.label}</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Swell</div>
+        <div class="stat-value">${fmtFt(data.swellHeight)} ft</div>
+        <div class="stat-sub">${data.swellPeriod != null ? data.swellPeriod.toFixed(0) + 's' : '--'} ${degToCompass(data.swellDir)}</div>
+      </div>
+    </div>`;
+}
+
+// ─────────────────────────────────────────────
+//  Add / Remove
+// ─────────────────────────────────────────────
+function removeSpot(id) {
+  const spots = getSpots().filter(s => s.id !== id);
+  saveSpots(spots);
+  document.getElementById('card-' + id)?.remove();
+}
+
+async function addSpot(catalogSpot) {
+  const spot = { ...catalogSpot, id: 'u' + Date.now() };
+  const existing = getSpots();
+  existing.push(spot);
+  saveSpots(existing);
+  closeModal();
+
+  const grid = document.getElementById('grid');
+  grid.insertAdjacentHTML('beforeend', skeletonCard(spot));
+  try {
+    renderCard(spot, await fetchBeach(spot));
+  } catch(e) {
+    renderCard(spot, { error: true });
+  }
+}
+
+// ─────────────────────────────────────────────
+//  Modal + Search
+// ─────────────────────────────────────────────
+function openModal() {
+  document.getElementById('modal').hidden = false;
+  document.getElementById('search-input').value = '';
+  document.getElementById('search-results').innerHTML = '';
+  document.getElementById('search-status').textContent = '';
+  setTimeout(() => document.getElementById('search-input').focus(), 60);
+}
+
+function closeModal() {
+  document.getElementById('modal').hidden = true;
+}
+
+document.getElementById('modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('modal')) closeModal();
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeModal();
+});
+
+let allResults = []; // curated + geocoded, in order
+let geoTimer;
+
+document.getElementById('search-input').addEventListener('input', e => {
+  clearTimeout(geoTimer);
+  const q = e.target.value.trim();
+  const resultsEl = document.getElementById('search-results');
+  if (q.length < 1) { resultsEl.innerHTML = ''; allResults = []; return; }
+
+  const added = getSpots();
+  const notAdded = s => !added.some(a => Math.abs(a.lat - s.lat) < 0.01 && Math.abs(a.lon - s.lon) < 0.01);
+  const ql = q.toLowerCase();
+
+  // Curated matches — instant
+  const curated = SURF_SPOTS
+    .filter(notAdded)
+    .filter(s => s.name.toLowerCase().includes(ql) || s.region.toLowerCase().includes(ql))
+    .slice(0, 8);
+
+  allResults = curated;
+  renderSearchResults(allResults, false);
+
+  // Geocoding fallback — debounced
+  geoTimer = setTimeout(async () => {
+    try {
+      const res  = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=8&language=en&format=json`);
+      const data = await res.json();
+      const geo  = (data.results || [])
+        .filter(notAdded)
+        .filter(r => !curated.some(c => Math.abs(c.lat - r.latitude) < 0.05))
+        .map(r => ({
+          name:   r.name,
+          region: [r.admin3 || r.admin2, r.admin1, r.country_code].filter(Boolean).join(', '),
+          lat:    r.latitude,
+          lon:    r.longitude,
+          facing: 270,
+          _geo:   true,
+        }))
+        .slice(0, 6);
+
+      if (geo.length) {
+        allResults = [...curated, ...geo];
+        renderSearchResults(allResults, curated.length > 0);
+      }
+    } catch(e) { /* silently ignore */ }
+  }, 400);
+});
+
+function renderSearchResults(spots, hasCurated) {
+  const el = document.getElementById('search-results');
+  if (!spots.length) {
+    el.innerHTML = '<div class="search-empty">No spots found</div>';
+    return;
+  }
+
+  let html = '';
+  spots.forEach((s, i) => {
+    if (s._geo && i > 0 && !spots[i-1]._geo && hasCurated) {
+      html += `<div class="results-divider">Other locations</div>`;
+    }
+    html += `<button class="search-result" onclick="pickResult(${i})">
+      <span class="result-name">${s.name}</span>
+      <span class="result-region">${s.region}</span>
+    </button>`;
+  });
+  el.innerHTML = html;
+}
+
+function pickResult(i) {
+  const s = allResults[i];
+  if (s) addSpot(s);
+}
+
+// ─────────────────────────────────────────────
+//  Detail view
+// ─────────────────────────────────────────────
+let detailCharts = [];
+
+function openDetail(id) {
+  const spot = getSpots().find(s => s.id === id);
+  if (!spot) return;
+  document.getElementById('detail-name').textContent   = spot.name;
+  document.getElementById('detail-region').textContent = spot.region;
+  document.getElementById('detail-badge').className    = 'badge';
+  document.getElementById('detail-badge').textContent  = '';
+  document.getElementById('detail-current').innerHTML  = '<div class="chart-loading" style="grid-column:1/-1;padding:20px">Loading…</div>';
+  document.getElementById('detail-days').innerHTML     = '';
+  document.getElementById('detail-wave-section').style.visibility = 'hidden';
+  document.getElementById('detail-wind-section').style.visibility = 'hidden';
+  detailCharts.forEach(c => c.destroy());
+  detailCharts = [];
+  document.getElementById('detail').hidden = false;
+  document.body.style.overflow = 'hidden';
+  loadDetail(spot);
+}
+
+function closeDetail() {
+  document.getElementById('detail').hidden = true;
+  document.body.style.overflow = '';
+  detailCharts.forEach(c => c.destroy());
+  detailCharts = [];
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && !document.getElementById('detail').hidden) closeDetail();
+});
+
+async function loadDetail(spot) {
+  try {
+    const marineH = 'wave_height,wave_period,wave_direction,swell_wave_height,swell_wave_period,swell_wave_direction';
+    const marineC = marineH;
+    const weatherH = 'wind_speed_10m,wind_direction_10m,wind_gusts_10m,temperature_2m,precipitation_probability';
+    const weatherC = 'wind_speed_10m,wind_direction_10m,wind_gusts_10m';
+
+    const [mr, wr] = await Promise.all([
+      fetch(`https://marine-api.open-meteo.com/v1/marine?latitude=${spot.lat}&longitude=${spot.lon}&hourly=${marineH}&current=${marineC}&forecast_days=7`),
+      fetch(`https://api.open-meteo.com/v1/forecast?latitude=${spot.lat}&longitude=${spot.lon}&hourly=${weatherH}&current=${weatherC}&wind_speed_unit=mph&temperature_unit=fahrenheit&forecast_days=7`),
+    ]);
+    if (!mr.ok || !wr.ok) throw new Error('API error');
+    const [md, wd] = await Promise.all([mr.json(), wr.json()]);
+
+    renderDetailCurrent(spot, md.current, wd.current);
+    renderDetailDays(spot, md.hourly, wd.hourly);
+    renderWaveChart(md.hourly);
+    renderWindChart(wd.hourly);
+  } catch(e) {
+    document.getElementById('detail-current').innerHTML =
+      '<div class="chart-loading" style="grid-column:1/-1;padding:20px;color:var(--poor)">Could not load data</div>';
+  }
+}
+
+function renderDetailCurrent(spot, mc, wc) {
+  const quality = calcQuality(mc.wave_height, mc.wave_period, wc.wind_speed_10m, wc.wind_direction_10m, spot.facing);
+  const wchar   = windChar(wc.wind_direction_10m, spot.facing);
+  const badge   = document.getElementById('detail-badge');
+  badge.className   = `badge ${quality}`;
+  badge.textContent = QUALITY_LABEL[quality];
+
+  document.getElementById('detail-current').innerHTML = `
+    <div class="detail-stat">
+      <div class="detail-stat-label">Waves</div>
+      <div class="detail-stat-value">${fmtFt(mc.wave_height)}<span> ft</span></div>
+      <div class="detail-stat-sub">${mc.wave_period?.toFixed(0) ?? '--'}s period</div>
+    </div>
+    <div class="detail-stat">
+      <div class="detail-stat-label">Swell</div>
+      <div class="detail-stat-value">${fmtFt(mc.swell_wave_height)}<span> ft</span></div>
+      <div class="detail-stat-sub">${mc.swell_wave_period?.toFixed(0) ?? '--'}s ${degToCompass(mc.swell_wave_direction)}</div>
+    </div>
+    <div class="detail-stat">
+      <div class="detail-stat-label">Wind</div>
+      <div class="detail-stat-value ${wchar.cls}">${wc.wind_speed_10m?.toFixed(0) ?? '--'}<span> mph</span></div>
+      <div class="detail-stat-sub">${degToCompass(wc.wind_direction_10m)} · ${wchar.label}</div>
+    </div>
+    <div class="detail-stat">
+      <div class="detail-stat-label">Gusts</div>
+      <div class="detail-stat-value">${wc.wind_gusts_10m?.toFixed(0) ?? '--'}<span> mph</span></div>
+      <div class="detail-stat-sub">${degToCompass(wc.wind_direction_10m)}</div>
+    </div>`;
+}
+
+function renderDetailDays(spot, marineH, weatherH) {
+  const times = marineH.time;
+  const days  = {};
+  times.forEach((t, i) => {
+    const key = t.slice(0, 10);
+    (days[key] = days[key] || []).push(i);
+  });
+
+  const html = Object.keys(days).slice(0, 7).map(key => {
+    const idxs   = days[key];
+    const d      = new Date(key + 'T12:00:00');
+    const label  = d.toLocaleDateString('en-US', { weekday: 'short' });
+    const amIdxs = idxs.filter(i => { const h = new Date(times[i]).getHours(); return h >= 5 && h < 12; });
+    const pmIdxs = idxs.filter(i => { const h = new Date(times[i]).getHours(); return h >= 12 && h < 18; });
+
+    function sessionQ(ixs) {
+      if (!ixs.length) return 'flat';
+      const n  = ixs.length;
+      const wH = ixs.reduce((s, i) => s + (marineH.wave_height[i] || 0), 0) / n;
+      const p  = ixs.reduce((s, i) => s + (marineH.wave_period[i] || 0), 0) / n;
+      const ws = ixs.reduce((s, i) => s + (weatherH.wind_speed_10m[i] || 0), 0) / n;
+      const wd = weatherH.wind_direction_10m[ixs[Math.floor(n / 2)]];
+      return calcQuality(wH, p, ws, wd, spot.facing);
+    }
+
+    const peakH = Math.max(...idxs.map(i => marineH.wave_height[i] || 0));
+    const amQ   = sessionQ(amIdxs);
+    const pmQ   = sessionQ(pmIdxs);
+
+    return `<div class="day-col">
+      <div class="day-name">${label}</div>
+      <div class="day-ht">${fmtFt(peakH)}'</div>
+      <div class="day-session"><div class="day-session-label">AM</div><div class="day-dot ${amQ}" title="${QUALITY_LABEL[amQ]}"></div></div>
+      <div class="day-session"><div class="day-session-label">PM</div><div class="day-dot ${pmQ}" title="${QUALITY_LABEL[pmQ]}"></div></div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('detail-days').innerHTML = `<div class="days-grid">${html}</div>`;
+}
+
+function hoursFromNow(hourly, hours) {
+  const now = Date.now();
+  return hourly.time
+    .map((t, i) => ({ ms: new Date(t).getTime(), i }))
+    .filter(({ ms }) => ms >= now - 3600000 && ms <= now + hours * 3600000)
+    .map(({ i }) => i);
+}
+
+function chartLabels(hourly, indices) {
+  return indices.map(i => {
+    const d = new Date(hourly.time[i]);
+    const h = d.getHours();
+    if (h === 0)  return d.toLocaleDateString('en-US', { weekday: 'short' });
+    if (h === 6)  return '6am';
+    if (h === 12) return '12pm';
+    if (h === 18) return '6pm';
+    return '';
+  });
+}
+
+const CHART_DEFAULTS = {
+  responsive: true, maintainAspectRatio: false,
+  interaction: { mode: 'index', intersect: false },
+  plugins: {
+    legend: { labels: { color: '#6a95ae', font: { size: 11 }, boxWidth: 10, padding: 14 } },
+    tooltip: {
+      backgroundColor: '#0d1e30', borderColor: 'rgba(255,255,255,0.08)', borderWidth: 1,
+      titleColor: '#ddeeff', bodyColor: '#6a95ae', padding: 10,
+    },
+  },
+  scales: {
+    x: {
+      ticks: {
+        color: '#6a95ae', font: { size: 10 }, maxRotation: 0,
+        autoSkip: false,
+        callback: function(val) { const l = this.getLabelForValue(val); return l === '' ? null : l; },
+      },
+      grid: { color: 'rgba(255,255,255,0.04)' },
+    },
+    y: {
+      ticks: { color: '#6a95ae', font: { size: 10 } },
+      grid:  { color: 'rgba(255,255,255,0.04)' },
+      beginAtZero: true,
+    },
+  },
+};
+
+function renderWaveChart(hourly) {
+  const section = document.getElementById('detail-wave-section');
+  const idxs    = hoursFromNow(hourly, 72);
+  const labels  = chartLabels(hourly, idxs);
+  const waveData  = idxs.map(i => +mToFt(hourly.wave_height[i] || 0).toFixed(1));
+  const swellData = idxs.map(i => +mToFt(hourly.swell_wave_height[i] || 0).toFixed(1));
+
+  const ctx = document.getElementById('chart-wave').getContext('2d');
+  detailCharts.push(new Chart(ctx, {
+    type: 'line',
+    data: { labels, datasets: [
+      { label: 'Wave (ft)', data: waveData, borderColor: '#40c4ff', backgroundColor: 'rgba(64,196,255,0.1)', fill: true, tension: 0.4, pointRadius: 0, borderWidth: 2 },
+      { label: 'Swell (ft)', data: swellData, borderColor: '#00e676', backgroundColor: 'rgba(0,230,118,0.06)', fill: true, tension: 0.4, pointRadius: 0, borderWidth: 1.5, borderDash: [5,3] },
+    ]},
+    options: { ...CHART_DEFAULTS,
+      plugins: { ...CHART_DEFAULTS.plugins, tooltip: { ...CHART_DEFAULTS.plugins.tooltip,
+        callbacks: { label: c => ` ${c.dataset.label}: ${c.raw} ft` }
+      }},
+    },
+  }));
+  section.style.visibility = 'visible';
+}
+
+function renderWindChart(hourly) {
+  const section = document.getElementById('detail-wind-section');
+  const idxs    = hoursFromNow(hourly, 72);
+  const labels  = chartLabels(hourly, idxs);
+  const windData = idxs.map(i => +(hourly.wind_speed_10m[i] || 0).toFixed(0));
+  const gustData = idxs.map(i => +(hourly.wind_gusts_10m[i] || 0).toFixed(0));
+
+  const ctx = document.getElementById('chart-wind').getContext('2d');
+  detailCharts.push(new Chart(ctx, {
+    type: 'line',
+    data: { labels, datasets: [
+      { label: 'Wind (mph)', data: windData, borderColor: '#ffca28', backgroundColor: 'rgba(255,202,40,0.1)', fill: true, tension: 0.4, pointRadius: 0, borderWidth: 2 },
+      { label: 'Gusts (mph)', data: gustData, borderColor: '#ff5252', backgroundColor: 'transparent', fill: false, tension: 0.4, pointRadius: 0, borderWidth: 1.5, borderDash: [5,3] },
+    ]},
+    options: { ...CHART_DEFAULTS,
+      plugins: { ...CHART_DEFAULTS.plugins, tooltip: { ...CHART_DEFAULTS.plugins.tooltip,
+        callbacks: { label: c => ` ${c.dataset.label}: ${c.raw} mph` }
+      }},
+    },
+  }));
+  section.style.visibility = 'visible';
+}
+
+// ─────────────────────────────────────────────
+//  Load all
+// ─────────────────────────────────────────────
+async function loadAll() {
+  const spots = getSpots();
+  const grid  = document.getElementById('grid');
+  const btn   = document.getElementById('refresh-btn');
+  const lu    = document.getElementById('last-updated');
+
+  grid.innerHTML = spots.map(skeletonCard).join('');
+  btn.classList.add('spinning');
+  lu.textContent = 'Updating…';
+
+  await Promise.all(spots.map(async spot => {
+    try {
+      renderCard(spot, await fetchBeach(spot));
+    } catch(e) {
+      renderCard(spot, { error: true });
+    }
+  }));
+
+  btn.classList.remove('spinning');
+  lu.textContent = 'Updated ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+loadAll();
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js');
+}
+</script>
+</body>
+</html>

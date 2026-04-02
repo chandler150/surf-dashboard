@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="112" fill="#08121f"/>
+  <!-- wave 1 (back) -->
+  <path d="M32 290 Q96 240 160 280 Q224 320 288 270 Q352 220 416 260 Q448 280 480 265 L480 380 Q448 395 416 375 Q352 340 288 380 Q224 420 160 380 Q96 340 32 375 Z" fill="#0e3a5c" opacity="0.7"/>
+  <!-- wave 2 (front) -->
+  <path d="M32 320 Q90 275 152 308 Q214 342 276 295 Q338 248 400 285 Q440 308 480 292 L480 420 Q440 438 400 418 Q338 385 276 425 Q214 465 152 428 Q90 390 32 420 Z" fill="#1a6fa0"/>
+  <!-- surf board -->
+  <ellipse cx="256" cy="210" rx="18" ry="68" fill="#fff" opacity="0.92" transform="rotate(-25 256 210)"/>
+  <ellipse cx="256" cy="210" rx="6" ry="22" fill="#40c4ff" opacity="0.7" transform="rotate(-25 256 210)"/>
+</svg>

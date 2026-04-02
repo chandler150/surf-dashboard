@@ -1,0 +1,19 @@
+{
+  "name": "California Surf",
+  "short_name": "Surf",
+  "description": "Live surf conditions for California breaks",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#08121f",
+  "theme_color": "#08121f",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
