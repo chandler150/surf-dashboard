@@ -394,7 +394,7 @@
     </div>
 
     <div class="detail-section" id="detail-tide-section" style="display:none">
-      <div class="section-title">Tides · 3 Days</div>
+      <div class="section-title">Tides · 2 Days</div>
       <div class="chart-wrap"><canvas id="chart-tide"></canvas></div>
       <div id="tide-station" style="font-size:0.68rem;color:var(--muted);margin-top:6px;padding:0 4px"></div>
     </div>
@@ -931,7 +931,7 @@ async function fetchTides(spot) {
   if (!station) return null;
 
   const now = new Date();
-  const end = new Date(now.getTime() + 3 * 86400000);
+  const end = new Date(now.getTime() + 2 * 86400000);
   const fmt = d => `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
 
   const url = `https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?station=${station.id}&product=predictions&datum=MLLW&time_zone=lst_ldt&interval=hilo&units=english&application=surf_dashboard&format=json&begin_date=${fmt(now)}&end_date=${fmt(end)}`;
@@ -955,7 +955,7 @@ function renderTideChart(tideData) {
   const nowMs  = Date.now();
   const labels = [], values = [], hiLoVals = [], hiLoColors = [];
 
-  for (let i = 0; i <= 72; i++) {
+  for (let i = 0; i <= 48; i++) {
     const tMs = nowMs + i * 3600000;
     const t   = new Date(tMs);
     const h   = t.getHours();
